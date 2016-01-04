@@ -7,6 +7,7 @@ import java.awt.BorderLayout;
 import javax.swing.Timer;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.*;
 
 import java.awt.event.ActionEvent;
 
@@ -14,17 +15,27 @@ import java.awt.event.ActionEvent;
 public class UmweltplakettenSpiel extends JFrame {
 	private static final long serialVersionUID = 1L;
 
-	Zeichenflaeche zeichenflaeche;	// Zeichenfläche, auf der gezeichnet wird
+	Zeichenflaeche zeichenflaeche;  // Zeichenfläche, auf der gezeichnet wird
 	
-	List<Auto> elemente = Collections.synchronizedList(new ArrayList<Auto>());
+	List<Auto> elemente                        = Collections.synchronizedList(new ArrayList<Auto>());
 
-	private static final int FENSTER_BREITE = 1024 + 62; // 62 == buttonStart.getWidth()
-	private static final int FENSTER_HOEHE = 730;
-	private static final int FRAMERATE = 35;
-        private int erstellungsFrequenz = 5000;
-        private int count = 0;
-	Timer timer = new Timer(1000 / FRAMERATE, null);		// Timer zur regelmäßigen Aktualisierung der Zeichenfläche
-        Timer timer2;
+	private static final int FENSTER_BREITE    = 1024 + 99; //textField.getWidth() == 99
+	private static final int FENSTER_HOEHE     = 730;
+	private static final int FRAMERATE         = 35;
+        
+        private int erstellungsFrequenz            = 5000,
+                    richtig                        = 0, 
+                    falsch                         = 0,
+                    zaehler                        = 0,
+                    geschwindigkeitsFreq           = 0,
+                    baeume                         = 4,
+                    erlaubteFalsche                = 10;
+        
+	private Timer timer                        = new Timer(1000 / FRAMERATE, null); // Timer zur regelmäßigen Aktualisierung der Zeichenfläche
+        private Timer timer2; // Timer zur erstelleng von neue Autos;
+        
+        private JButton buttonStart;
+        private JTextField textField;
 
 	public UmweltplakettenSpiel()
 	{
@@ -35,40 +46,30 @@ public class UmweltplakettenSpiel extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		// Zeichenfläche anlegen und dem Fenster hinzufügen
-		zeichenflaeche = new Zeichenflaeche(FENSTER_BREITE, FENSTER_HOEHE);
+		zeichenflaeche      = new Zeichenflaeche(FENSTER_BREITE, FENSTER_HOEHE);
 		container.add(zeichenflaeche);
-                erzeugeBaeume(4);
-		// Ein erstes Beispiel. Für das spätere Spiel nicht benötigt: 
-		// Einen Neues-Auto-Button anlegen und dem Fenster anfügen
-		//JButton buttonNeuesAuto = new JButton("Neues Auto");
-                JButton buttonStart = new JButton("Start");
-                getContentPane().add(buttonStart, BorderLayout.EAST);
-		//getContentPane().add(buttonNeuesAuto, BorderLayout.SOUTH);
-		/*buttonNeuesAuto.addActionListener((ActionEvent e) -> {
-                    neuesAuto();
-                });*/
+                erzeugeBaeume(baeume);
+                buttonStart         = new JButton("Start"); // button fürs spiel start
+                getContentPane().add(buttonStart, BorderLayout.SOUTH);
                 
                 buttonStart.addActionListener((ActionEvent e) -> {
-                    startSpiel();
+                        neuesAuto();
+                        startSpiel();
                 });
-		
+		                
+                textField           = new JTextField();
+                setTextField();
+                textField.setEditable(false);
+                getContentPane().add(textField, BorderLayout.EAST);
+                
 		// darstellen
 		setVisible(true);
 
-		// Ein timer-gesteuerter regelmäßiger Thread zur Aktualisierung der Zeichenfläche
-		/*timer.scheduleAtFixedRate(new TimerTask() {
-			@Override
-			public void run() {
-				loescheAutosRechts();
-                                aktualisiereSzene();
-                                zeichenflaeche.repaint();
-			}
-		}, 1000 / FRAMERATE, 1000 / FRAMERATE);*/
-                
+		// Ein timer-gesteuerter regelmäßiger Thread zur Aktualisierung der Zeichenfläche                
                 timer.addActionListener((ActionEvent e) -> {
-                    loescheAutosRechts();
-                    aktualisiereSzene();
-                    zeichenflaeche.repaint();
+                        loescheAutosRechts();
+                        aktualisiereSzene();
+                        zeichenflaeche.repaint();
                 });
                 timer.start();
                 
@@ -77,91 +78,131 @@ public class UmweltplakettenSpiel extends JFrame {
 	
 	// Hauptdialog anlegen
 	public static void main(String arg[]) {
-            new UmweltplakettenSpiel();
+                new UmweltplakettenSpiel();
 	}
 
 	// Methode zum Erzeugen eines neuen Autos
 	private void neuesAuto() {
-		String name = "IL-SSE " + String.format("%03d", elemente.size() + 1);
-		int posY = (int) (Math.random() * (FENSTER_HOEHE - 200));
-		int geschwindigkeit = (int) (30 + Math.random() * 100); // 30..130 km/h
-                int emission = (int) (1 + Math.random() * 3);
-                int plkt = (int) (1 + Math.random() * 3);  
-		Auto neuesAuto = new Auto(name, posY, geschwindigkeit, emission, plkt);
+		String name         = "IL-SSE " + String.format("%03d", elemente.size() + 1);
+                
+		int posY            = (int) (Math.random() * (FENSTER_HOEHE - 200)),
+                    geschwindigkeit = (int) (30 + Math.random() * geschwindigkeitsFreq), // 30..130 km/h
+                    emission        = (int) (1 + Math.random() * 3),
+                    plkt            = (int) (1 + Math.random() * 3); 
+                
+		Auto neuesAuto      = new Auto(name, posY, geschwindigkeit, emission, plkt);
+                
 		elemente.add(neuesAuto);
 		zeichenflaeche.add(neuesAuto);
                 
 	}
 	
 	private void erzeugeBaeume(int anzahl) {
-	// Möglicher Startpunkt: Definieren Sie eine Klasse Baum
-	// Orientieren Sie sich an der Klasse Auto (Image "baum.png")
-	// Erzeugen Sie hier 0 bis 4 Baum-Objekte und fügen Sie sie der Zeichenfläche hinzu
-            int posX, posY;
-            for(int i = 0; i < anzahl; i++){
-                posX = (int) (Math.random() * (FENSTER_BREITE - 152));
-                posY = (int) (Math.random() * (FENSTER_HOEHE - 250));
-                Baum baum = new Baum(posX, posY);
-                zeichenflaeche.add(baum);
-            }
+                // Möglicher Startpunkt: Definieren Sie eine Klasse Baum
+                // Orientieren Sie sich an der Klasse Auto (Image "baum.png")
+                // Erzeugen Sie hier 0 bis 4 Baum-Objekte und fügen Sie sie der Zeichenfläche hinzu
+                int posX, posY;
+                for(int i = 0; i < anzahl; i++){
+                        posX      = (int) (Math.random() * (FENSTER_BREITE - 152));
+                        posY      = (int) (Math.random() * (FENSTER_HOEHE - 250));
+                        Baum baum = new Baum(posX, posY);
+                        zeichenflaeche.add(baum);
+                }
 	}
         
         // lösche auto beim erreichung von rechtes Rand
         private void loescheAutosRechts(){
-            synchronized (elemente) {
-					Iterator<Auto> it = elemente.iterator();
-					while (it.hasNext()) {
-						Auto element = it.next();
-						element.updatePosition(FRAMERATE);
-						if (element.getPosX() > FENSTER_BREITE) {
-                                                        testEmission(element);
-							it.remove();
-							elemente.remove(element);
-							zeichenflaeche.remove(element);
-							System.out.println("Auto gelöscht " + element.getName());
-						}
-					}
+                synchronized (elemente) {
+                        Iterator<Auto> it = elemente.iterator();
+                        while (it.hasNext()) {
+                                Auto element = it.next();
+				element.updatePosition(FRAMERATE);
+				if (element.getPosX() > FENSTER_BREITE) {
+                                        testEmission(element);
+                                        if(elemente.isEmpty()){ // prüfen ob elemente leer ist, um "ConcurrentModificationException" zu vermeiden
+                                                return;
+                                        }
+                                        it.remove();
+					elemente.remove(element);
+					zeichenflaeche.remove(element);
+					System.out.println("Auto gelöscht " + element.getName());
 				}
+			}
+		}
         }
         
         private void aktualisiereSzene(){
-            synchronized(elemente){
-                elemente.stream().forEach((auto) -> {
-                    auto.updatePosition(FRAMERATE);
-                });
-            }
+                synchronized(elemente){
+                        elemente.stream().forEach((auto) -> {
+                                auto.updatePosition(FRAMERATE);
+                        });
+                }
         }
         
         // vergleich zwischen emissions wert und plakette wert
-        private boolean testEmission(Auto element){
-            return element.testUmweltPlakette();
+        private void testEmission(Auto element){
+                if(element.testUmweltPlakette()){
+                        richtig++;
+                } else {
+                        falsch++;
+                }            
+                setTextField();
+                if(falsch == erlaubteFalsche){
+                        timer2.stop();
+                        zeigeErgebnisse();
+                        resetSpiel();
+                } 
         }
         
+        // spiel start
         private void startSpiel(){
-            /*timer2.scheduleAtFixedRate(new TimerTask() {
-			@Override
-			public void run() {
-                            neuesAuto();
-                            count++;
-                            if(count == 5){
-                                erstellungsFrequenz -= 5000;
-                                timer2.cancel();
-                            }
-			}
-		}, 0, erstellungsFrequenz);*/
-            timer2 = new Timer(erstellungsFrequenz, null);
-            timer2.addActionListener((ActionEvent e) -> {
-                    neuesAuto();
-                    count++;
-                    if(count == 5){
+                timer2 = new Timer(erstellungsFrequenz, null);
+                timer2.addActionListener((ActionEvent e) -> {
+                        neuesAuto();
+                        erhoeheSchwierigkeit();                    
+                });
+                timer2.start();
+                buttonStart.setEnabled(false);
+        }
+        
+        private void erhoeheSchwierigkeit(){
+                zaehler++;
+                if(zaehler == 5){ // beim erstellung von 5 Autos, schwierigkeit erhöhern 
                         erstellungsFrequenz -= 1000;
-                        count = 0;
+                        geschwindigkeitsFreq += 25;
+                        zaehler = 0;
                         if(erstellungsFrequenz <= 0){
                             erstellungsFrequenz = 1000;
                         }
+                        if(geschwindigkeitsFreq > 100){
+                            geschwindigkeitsFreq = 100;
+                        }
                         timer2.setDelay(erstellungsFrequenz);
-                    }
-                });
-                timer2.start();
+                }
+        }
+        
+        // ergebnisse zeigen
+        private void zeigeErgebnisse(){
+                String result = richtig + " richtig." + "\n" + falsch + " falsch.";
+                System.out.println(result);
+                JOptionPane.showMessageDialog(new JFrame(), result, "Gameover", 2);
+        }
+        
+        // spiel zürucksetzen
+        private void resetSpiel(){
+                zaehler              = 0;
+                erstellungsFrequenz  = 5000;
+                geschwindigkeitsFreq = 0;
+                richtig              = 0;
+                falsch               = 0;
+                
+                elemente.clear();
+                zeichenflaeche.clear();
+                buttonStart.setEnabled(true);
+        }
+        
+        private void setTextField(){
+            String text = richtig + " richtig." + "\n" + falsch + " falsch."; 
+            textField.setText(text);
         }
 }
